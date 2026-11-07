@@ -9,10 +9,23 @@ import (
 	"strings"
 )
 
-// updateVariable regenerates goldens when set. It is a variable rather than a
+// updateVariable regenerates goldens when it is 1. It is a variable rather than a
 // flag, so it reaches every package under ./... and a test binary that already
 // registers its own -update keeps working.
 const updateVariable = "TUIDRIVE_UPDATE"
+
+// goldenUpdateRequested refuses any other value, because a switch read as set would
+// take TUIDRIVE_UPDATE=0 as yes, rewrite every golden and report green.
+func goldenUpdateRequested() (bool, error) {
+	switch value := os.Getenv(updateVariable); value {
+	case "":
+		return false, nil
+	case "1":
+		return true, nil
+	default:
+		return false, fmt.Errorf("%s takes 1 to write goldens, or no value to compare them, and got %q", updateVariable, value)
+	}
+}
 
 // Golden waits for the output to settle, then compares the screen with
 // testdata/<test name>/<name>.txt and its style with <name>.style beside it. A
@@ -26,7 +39,10 @@ func (term *Terminal) Golden(name string) {
 func (term *Terminal) compareGolden(name string, frame Frame) {
 	term.t.Helper()
 	base := filepath.Join("testdata", filepath.FromSlash(term.t.Name()), name)
-	update := os.Getenv(updateVariable) != ""
+	update, err := goldenUpdateRequested()
+	if err != nil {
+		term.t.Fatalf("tuidrive: %v", err)
+	}
 	for _, file := range []struct{ path, got string }{
 		{base + ".txt", frame.Text()},
 		{base + ".style", frame.Style()},
