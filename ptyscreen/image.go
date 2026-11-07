@@ -144,7 +144,12 @@ func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, i
 	if bg != defaultBackground {
 		draw.Draw(canvas, box, image.NewUniform(bg), image.Point{}, draw.Src)
 	}
-	if style.Attrs&uv.AttrConceal == 0 && cell.text != " " {
+	pattern, braille := braillePattern(cell.text)
+	switch {
+	case style.Attrs&uv.AttrConceal != 0 || cell.text == " ":
+	case braille:
+		drawBraille(canvas, left, top, pattern, fg)
+	default:
 		drawer := font.Drawer{
 			Dst:  canvas,
 			Src:  image.NewUniform(fg),
@@ -159,6 +164,28 @@ func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, i
 	}
 	if style.Attrs&uv.AttrStrikethrough != 0 {
 		draw.Draw(canvas, image.Rect(box.Min.X, top+strikeAt, box.Max.X, top+strikeAt+1), image.NewUniform(fg), image.Point{}, draw.Src)
+	}
+}
+
+// brailleDots places each of a braille pattern's eight dots by its bit, as a column and a row.
+var brailleDots = [8][2]int{{0, 0}, {0, 1}, {0, 2}, {1, 0}, {1, 1}, {1, 2}, {0, 3}, {1, 3}}
+
+func braillePattern(text string) (uint8, bool) {
+	runes := []rune(text)
+	if len(runes) != 1 || runes[0] < 0x2800 || runes[0] > 0x28ff {
+		return 0, false
+	}
+	return uint8(runes[0] - 0x2800), true
+}
+
+// drawBraille draws a pattern's dots as squares, because DejaVu Sans Mono has no braille.
+func drawBraille(canvas *image.RGBA, left, top int, pattern uint8, fg color.RGBA) {
+	for bit, at := range brailleDots {
+		if pattern&(1<<bit) == 0 {
+			continue
+		}
+		x, y := left+2+at[0]*4, top+2+at[1]*9/2
+		draw.Draw(canvas, image.Rect(x, y, x+2, y+2), image.NewUniform(fg), image.Point{}, draw.Src)
 	}
 }
 
