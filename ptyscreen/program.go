@@ -47,6 +47,33 @@ func (p Program) withDefaults() Program {
 	return p
 }
 
+// Check refuses a program that could never start, for its own reason. Left to the
+// fork, a missing working directory reads as a missing binary.
+func (p Program) Check() error {
+	if _, err := p.resolvedPath(); err != nil {
+		return err
+	}
+	if p.Dir == "" {
+		return nil
+	}
+	info, err := os.Stat(p.Dir)
+	if err != nil {
+		return fmt.Errorf("working directory: %w", err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("working directory %s is not a directory", p.Dir)
+	}
+	return nil
+}
+
+// CheckWaitTimeout is the one bound on a wait, for a flag and a script's verb alike.
+func CheckWaitTimeout(timeout time.Duration) error {
+	if timeout <= 0 {
+		return fmt.Errorf("timeout needs a duration above zero, and got %s", timeout)
+	}
+	return nil
+}
+
 func (p Program) resolvedPath() (string, error) {
 	found, err := exec.LookPath(p.Path)
 	if err != nil {

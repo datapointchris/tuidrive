@@ -258,8 +258,8 @@ func parseTimeout(argument string) (step, error) {
 	if err != nil {
 		return nil, fmt.Errorf("timeout needs a duration such as 30s: %w", err)
 	}
-	if timeout <= 0 {
-		return nil, fmt.Errorf("timeout needs a duration above zero, and got %s", timeout)
+	if err := ptyscreen.CheckWaitTimeout(timeout); err != nil {
+		return nil, err
 	}
 	return timeoutStep{timeout: timeout}, nil
 }

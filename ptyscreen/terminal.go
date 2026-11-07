@@ -73,6 +73,9 @@ type Terminal struct {
 // Open starts the program on a pty and begins drawing its output.
 func Open(program Program) (*Terminal, error) {
 	program = program.withDefaults()
+	if err := program.Check(); err != nil {
+		return nil, err
+	}
 	path, err := program.resolvedPath()
 	if err != nil {
 		return nil, err

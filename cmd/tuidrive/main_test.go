@@ -4,22 +4,31 @@ import (
 	"bytes"
 	"errors"
 	"image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/datapointchris/goclikit"
+	"github.com/datapointchris/goselfupdate/autoupdate"
+
 	"github.com/datapointchris/tuidrive"
 )
 
+// runTool runs the shipped path with the update check suppressed. goclikit resolves
+// the command from os.Args, so that is where the words go.
 func runTool(t *testing.T, stdin string, args ...string) (string, error) {
 	t.Helper()
+	original := os.Args
+	os.Args = append([]string{"tuidrive"}, args...)
+	t.Cleanup(func() { os.Args = original })
 	var stdout bytes.Buffer
 	root := rootCommand()
-	root.SetArgs(args)
 	root.SetOut(&stdout)
+	root.SetErr(io.Discard)
 	root.SetIn(strings.NewReader(stdin))
-	err := root.Execute()
+	err := execute(root, autoupdate.Config{Suppress: true})
 	return stdout.String(), err
 }
 
@@ -81,8 +90,7 @@ func TestRunNamesTheFailedLineAndShowsTheScreen(t *testing.T) {
 			t.Errorf("error lacks %q:\n%v", want, err)
 		}
 	}
-	var usage usageError
-	if errors.As(err, &usage) {
+	if errors.Is(err, goclikit.ErrUsage) {
 		t.Errorf("a failed wait reads as a bad command line, which exits 2: %v", err)
 	}
 }
@@ -113,19 +121,30 @@ func TestRunReportsACrashWithTheScreen(t *testing.T) {
 }
 
 func TestRunRefusesACommandLineThatCouldNeverRun(t *testing.T) {
+	notADirectory := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(notADirectory, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
 	cases := map[string][]string{
-		"no program":     {"run", "-"},
-		"bad size":       {"run", "-", "--size", "wide", "--", "sh"},
-		"bad env":        {"run", "-", "--env", "NOEQUALS", "--", "sh"},
-		"missing binary": {"run", "-", "--", "/nonexistent/program"},
-		"unknown flag":   {"run", "-", "--nope", "--", "sh"},
+		"unknown command":  {"bogus"},
+		"no program":       {"run", "-"},
+		"bad size":         {"run", "-", "--size", "wide", "--", "sh"},
+		"bad env":          {"run", "-", "--env", "NOEQUALS", "--", "sh"},
+		"missing binary":   {"run", "-", "--", "/nonexistent/program"},
+		"unknown flag":     {"run", "-", "--nope", "--", "sh"},
+		"zero timeout":     {"run", "-", "--timeout", "0", "--", "sh"},
+		"negative timeout": {"run", "-", "--timeout", "-1s", "--", "sh"},
+		"missing dir":      {"run", "-", "--dir", "/nonexistent/dir", "--", "sh"},
+		"out is a file":    {"run", "-", "--out", notADirectory, "--", "sh"},
 	}
 	for name, args := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := runTool(t, "wait x\n", args...)
-			var usage usageError
-			if !errors.As(err, &usage) {
+			stdout, err := runTool(t, "wait x\n", args...)
+			if !errors.Is(err, goclikit.ErrUsage) {
 				t.Errorf("err = %v, want a usage error, which exits 2", err)
+			}
+			if stdout != "" {
+				t.Errorf("a refused command line wrote to stdout:\n%s", stdout)
 			}
 		})
 	}

@@ -10,6 +10,8 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/charmbracelet/x/vt v0.1.0
 	github.com/charmbracelet/x/xpty v0.1.4
+	github.com/datapointchris/goclikit v0.4.3
+	github.com/datapointchris/goselfupdate v0.11.0
 	github.com/go-fonts/dejavu v0.3.4
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/image v0.47.0
@@ -30,7 +32,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.30 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/spf13/pflag v1.0.9 // indirect
+	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/xo/terminfo v1.0.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
