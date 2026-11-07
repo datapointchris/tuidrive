@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.9
 	github.com/charmbracelet/x/vt v0.1.0
 	github.com/charmbracelet/x/xpty v0.1.4
-	github.com/datapointchris/goclikit v0.4.3
+	github.com/datapointchris/goclikit v0.5.3
 	github.com/datapointchris/goselfupdate v0.11.0
 	github.com/go-fonts/dejavu v0.3.4
 	github.com/spf13/cobra v1.10.2

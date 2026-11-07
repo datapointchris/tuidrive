@@ -31,8 +31,8 @@ github.com/clipperhouse/uax29/v2 v2.7.0/go.mod h1:EFJ2TJMRUaplDxHKj1qAEhCtQPW2tJ
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/creack/pty v1.1.24 h1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=
 github.com/creack/pty v1.1.24/go.mod h1:08sCNb52WyoAwi2QDyzUCTgcvVFhUzewun7wtTfvcwE=
-github.com/datapointchris/goclikit v0.4.3 h1:xpYLn8gAshA2fwVW7vkyChvmsWzIsllxPIHzR8TqHyw=
-github.com/datapointchris/goclikit v0.4.3/go.mod h1:soeCMU9QFjwW2NaOjaA7NvAPfPhYuuPksrFV5SQyaa0=
+github.com/datapointchris/goclikit v0.5.3 h1:6ec9nuswLXeIqZLa0YVEQeqsCnrjkqF/3gDtCBSowNQ=
+github.com/datapointchris/goclikit v0.5.3/go.mod h1:hEbplQyvrWq5m5UepXVNKfv8jvvlmQshNMrWdoHBb6Y=
 github.com/datapointchris/goselfupdate v0.11.0 h1:aUJ27Cm9ZNGMfC7+kKChBsnm8offBE99wwUa10lFo2w=
 github.com/datapointchris/goselfupdate v0.11.0/go.mod h1:YcgyvM+wH6nh9zo9xioUqTHeH5HTYeCHevv4U+G7INc=
 github.com/go-fonts/dejavu v0.3.4 h1:Qqyx9IOs5CQFxyWTdvddeWzrX0VNwUAvbmAzL0fpjbc=
