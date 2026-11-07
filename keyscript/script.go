@@ -17,10 +17,10 @@ import (
 	"github.com/datapointchris/tuidrive/ptyscreen"
 )
 
-// Syntax is the script grammar as the command's help and a parse failure print it.
-const Syntax = `A script is one verb per line. A line starting with # is a comment.
+// Syntax is the script grammar, printed by the command's help and for an unknown verb.
+var Syntax = `A script is one verb per line. A line starting with # is a comment.
 
-  press KEY...          send keys: j enter esc tab up ctrl+c shift+tab space
+  press KEY...          send keys, such as j enter ctrl+c
   type TEXT             send text to a text field
   wait MATCH            wait for MATCH to be on the screen
   gone MATCH            wait for MATCH to be off the screen
@@ -32,7 +32,9 @@ const Syntax = `A script is one verb per line. A line starting with # is a comme
 MATCH is bare text, "quoted text" or /a regular expression/. Text matches within
 one row. A pattern reads the whole screen as one line per row, so (?m)^ and $ anchor
 a row. TEXT and TOKEN are bare or quoted. A line ends with its text, so # in the
-middle of a line is part of it.`
+middle of a line is part of it.
+
+KEY is ` + ptyscreen.KeyNames + `.`
 
 // Script is a parsed key script.
 type Script struct {
@@ -40,8 +42,7 @@ type Script struct {
 	steps []step
 }
 
-// FrameSink receives each frame a script names. The frame reads through the
-// script's masks.
+// FrameSink receives each frame a script names.
 type FrameSink func(name string, frame ptyscreen.Frame) error
 
 // step is one line of a script. It runs against the replay in progress.
@@ -52,7 +53,6 @@ type step interface {
 type replay struct {
 	terminal    *ptyscreen.Terminal
 	sink        FrameSink
-	masks       []ptyscreen.Mask
 	expectsExit bool
 }
 
@@ -229,8 +229,7 @@ func parseFrame(argument string) (step, error) {
 }
 
 func (s frameStep) run(state *replay) error {
-	state.terminal.Settle()
-	return state.sink(s.name, state.terminal.Frame().Masked(state.masks...))
+	return state.sink(s.name, state.terminal.SettledFrame())
 }
 
 type maskStep struct{ mask ptyscreen.Mask }
@@ -248,7 +247,7 @@ func parseMask(argument string) (step, error) {
 }
 
 func (s maskStep) run(state *replay) error {
-	state.masks = append(state.masks, s.mask)
+	state.terminal.AddMask(s.mask)
 	return nil
 }
 

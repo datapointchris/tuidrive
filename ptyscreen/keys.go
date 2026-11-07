@@ -2,6 +2,8 @@ package ptyscreen
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	uv "github.com/charmbracelet/ultraviolet"
@@ -38,9 +40,13 @@ var namedKeys = map[string]rune{
 	"up":        uv.KeyUp,
 }
 
-// KeyNames is the help text every refused key name prints.
-const KeyNames = "one character; backspace, delete, down, end, enter, esc, f1-f12, home, insert, " +
-	"left, pgdown, pgup, right, space, tab, up; ctrl+<letter>, ctrl+space; alt+<any of these>; shift+tab"
+// controlPunctuation is what ctrl+ accepts beside the letters.
+const controlPunctuation = `[\]^_`
+
+// KeyNames says what a key can be, for the command's help and a refused key name.
+var KeyNames = fmt.Sprintf("one character; %s; ctrl+<letter or one of %s>, ctrl+space; alt+<any of these>; shift+tab",
+	strings.Join(slices.Sorted(maps.Keys(namedKeys)), ", "),
+	strings.Join(strings.Split(controlPunctuation, ""), " "))
 
 // ParseKey reads a key's name into the event the emulator encodes. It refuses a
 // combination the emulator has no encoding for, because SendKey would send
@@ -81,5 +87,5 @@ func parseKey(name string) (uv.KeyPressEvent, bool) {
 }
 
 func hasControlCode(code rune) bool {
-	return (code >= 'a' && code <= 'z') || strings.ContainsRune(`[\]^_`, code)
+	return (code >= 'a' && code <= 'z') || strings.ContainsRune(controlPunctuation, code)
 }

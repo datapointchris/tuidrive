@@ -147,8 +147,7 @@ func run(stdin io.Reader, stdout io.Writer, scriptPath, programPath string, prog
 		return err
 	}
 	if frames == 0 {
-		terminal.Settle()
-		return sink("end", terminal.Frame())
+		return sink("end", terminal.SettledFrame())
 	}
 	return nil
 }

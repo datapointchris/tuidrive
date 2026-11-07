@@ -20,8 +20,7 @@ const updateVariable = "TUIDRIVE_UPDATE"
 // goes on. Run with TUIDRIVE_UPDATE=1 to write them.
 func (term *Terminal) Golden(name string) {
 	term.t.Helper()
-	term.terminal.Settle()
-	term.compareGolden(name, term.Frame())
+	term.compareGolden(name, term.terminal.SettledFrame())
 }
 
 func (term *Terminal) compareGolden(name string, frame Frame) {

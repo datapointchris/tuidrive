@@ -57,7 +57,6 @@ func Build(t testing.TB, pkg string) string {
 type Terminal struct {
 	t        testing.TB
 	terminal *ptyscreen.Terminal
-	masks    []ptyscreen.Mask
 }
 
 // Start runs the program on a pty, and ends it when the test ends.
@@ -131,6 +130,18 @@ func (term *Terminal) WaitGone(text string) {
 	}
 }
 
+// WaitGonePattern is WaitGone for a regular expression.
+func (term *Terminal) WaitGonePattern(pattern string) {
+	term.t.Helper()
+	compiled, err := regexp.Compile(pattern)
+	if err != nil {
+		term.t.Fatalf("tuidrive: %v", err)
+	}
+	if err := term.terminal.WaitGonePattern(compiled); err != nil {
+		term.t.Fatalf("tuidrive: %v", err)
+	}
+}
+
 // WaitExit blocks until the program ends and returns its exit code, which is -1
 // where a signal ended it.
 func (term *Terminal) WaitExit() int {
@@ -143,26 +154,24 @@ func (term *Terminal) WaitExit() int {
 }
 
 // Frame returns the screen as it stands, read through this terminal's masks.
-func (term *Terminal) Frame() Frame {
-	return term.terminal.Frame().Masked(term.masks...)
-}
+func (term *Terminal) Frame() Frame { return term.terminal.Frame() }
 
 // Mask replaces each match of a regular expression with token in the text and
-// style of every later frame. Waits and images still read what the screen holds.
+// style of every later frame. Waits and images still read what the screen holds. A
+// script's mask lines add to the same list.
 func (term *Terminal) Mask(pattern, token string) {
 	term.t.Helper()
 	compiled, err := regexp.Compile(pattern)
 	if err != nil {
 		term.t.Fatalf("tuidrive: %v", err)
 	}
-	term.masks = append(term.masks, ptyscreen.Mask{Pattern: compiled, Token: token})
+	term.terminal.AddMask(ptyscreen.Mask{Pattern: compiled, Token: token})
 }
 
 // WritePNG waits for the output to settle and writes the screen as a PNG.
 func (term *Terminal) WritePNG(path string) {
 	term.t.Helper()
-	term.terminal.Settle()
-	if err := term.terminal.Frame().WritePNG(path); err != nil {
+	if err := term.terminal.SettledFrame().WritePNG(path); err != nil {
 		term.t.Fatalf("tuidrive: %v", err)
 	}
 }
@@ -182,7 +191,7 @@ func (term *Terminal) RunScript(path string) {
 	}
 	err = script.Run(term.terminal, func(name string, frame ptyscreen.Frame) error {
 		term.t.Helper()
-		term.compareGolden(name, frame.Masked(term.masks...))
+		term.compareGolden(name, frame)
 		return nil
 	})
 	if err != nil {

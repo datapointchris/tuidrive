@@ -165,8 +165,8 @@ func TestMaskKeepsARowStableWhenTheMatchChangesWidth(t *testing.T) {
 		if err := term.WaitFor("title"); err != nil {
 			t.Fatal(err)
 		}
-		mask := Mask{Pattern: regexp.MustCompile(`\d+[mh] ago\s*`), Token: "<age> "}
-		return term.Frame().Masked(mask)
+		term.AddMask(Mask{Pattern: regexp.MustCompile(`\d+[mh] ago\s*`), Token: "<age> "})
+		return term.Frame()
 	}
 	wide, narrow := render("59m ago"), render("1h ago ")
 	if wide.Text() != "<age> title\n" || narrow.Text() != wide.Text() {

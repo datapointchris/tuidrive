@@ -221,9 +221,9 @@ type Mask struct {
 	Token   string
 }
 
-// Masked returns a frame whose Text and Style read through the masks. Its Image
+// masked returns a frame whose Text and Style read through the masks. Its Image
 // still shows what the screen held, and a wait never sees a mask.
-func (f Frame) Masked(masks ...Mask) Frame {
+func (f Frame) masked(masks []Mask) Frame {
 	if len(masks) == 0 {
 		return f
 	}

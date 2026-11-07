@@ -58,6 +58,7 @@ type Terminal struct {
 	lastActivity  time.Time
 	synchronizing bool
 	lastFinished  Frame
+	masks         []Mask
 	exitCode      int
 	hasExited     bool
 
@@ -310,12 +311,26 @@ func (t *Terminal) SetWaitTimeout(timeout time.Duration) {
 	t.timeout = timeout
 }
 
-// Frame returns the screen as it stands. While the program holds a synchronized
-// update open, that is the last whole frame.
+// AddMask applies to every frame Frame returns from here on, after the masks already
+// added.
+func (t *Terminal) AddMask(mask Mask) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.masks = append(t.masks, mask)
+}
+
+// Frame returns the screen as it stands, read through the terminal's masks. While
+// the program holds a synchronized update open, that is the last whole frame.
 func (t *Terminal) Frame() Frame {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return t.currentFrame()
+	return t.currentFrame().masked(t.masks)
+}
+
+// SettledFrame lets the output settle first, so the frame is not half painted.
+func (t *Terminal) SettledFrame() Frame {
+	t.Settle()
+	return t.Frame()
 }
 
 func (t *Terminal) currentFrame() Frame {
@@ -354,8 +369,8 @@ func (t *Terminal) WaitGonePattern(pattern *regexp.Regexp) error {
 	})
 }
 
-// Settle blocks until the output stops, for at most about half a second, so a
-// frame read next is not half painted.
+// Settle blocks until the output stops, for at most quietLimit, so a frame read
+// next is not half painted.
 func (t *Terminal) Settle() {
 	_ = t.wait("output to settle", func(string) bool { return true })
 }
