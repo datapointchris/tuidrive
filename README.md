@@ -87,7 +87,9 @@ if code := term.WaitExit(); code != 0 {
 }
 ```
 
-Import it from `_test.go` files only, so what you ship never links the emulator.
+Import it from `_test.go` files only, so what you ship never links the emulator. Its requirements
+still count toward your module's versions, so adding it can raise the terminal-width and ANSI
+modules your program ships with. Compare `go list -m all` before and after.
 
 ## What a frame holds
 
