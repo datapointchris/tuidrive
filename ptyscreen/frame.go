@@ -98,10 +98,11 @@ func rowText(row []frameCell) string {
 	return strings.TrimRight(b.String(), " ")
 }
 
-// boxed returns the drawn screen between rules, for a failure message.
-func (f Frame) boxed() string {
+// Report returns the drawn screen between rules with its size, as a failure prints
+// it. It ignores masks, so a failure shows what the program really drew.
+func (f Frame) Report() string {
 	rule := strings.Repeat("-", f.cols)
-	return rule + "\n" + f.rawText() + rule + "\n"
+	return fmt.Sprintf("screen (%dx%d):\n%s\n%s%s\n", f.cols, f.rows, rule, f.rawText(), rule)
 }
 
 // Style returns the screen's styled runs with masks applied, one per line, as

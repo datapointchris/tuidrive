@@ -50,9 +50,10 @@ type step interface {
 }
 
 type replay struct {
-	terminal *ptyscreen.Terminal
-	sink     FrameSink
-	masks    []ptyscreen.Mask
+	terminal    *ptyscreen.Terminal
+	sink        FrameSink
+	masks       []ptyscreen.Mask
+	expectsExit bool
 }
 
 // Parse reads a script. It refuses the whole script on any line it cannot read,
@@ -83,13 +84,21 @@ func Parse(name string, source io.Reader) (*Script, error) {
 	return script, nil
 }
 
-// Run replays the script against a program already started.
+// Run replays the script against a program already started. A program that ended
+// with a code other than 0 fails the run unless an exits line named that code,
+// because a crash after the last wait is what a replay exists to catch.
 func (s *Script) Run(terminal *ptyscreen.Terminal, sink FrameSink) error {
 	state := &replay{terminal: terminal, sink: sink}
 	for _, current := range s.steps {
 		if err := current.run(state); err != nil {
 			return fmt.Errorf("%s:%w", s.name, err)
 		}
+	}
+	if state.expectsExit {
+		return nil
+	}
+	if err := terminal.FailedExit(); err != nil {
+		return fmt.Errorf("%s: the script ended with no exits line: %w", s.name, err)
 	}
 	return nil
 }
@@ -275,12 +284,13 @@ func parseExits(argument string) (step, error) {
 }
 
 func (s exitsStep) run(state *replay) error {
+	state.expectsExit = true
 	code, err := state.terminal.WaitExit()
 	if err != nil {
 		return err
 	}
 	if code != s.code {
-		return fmt.Errorf("the program exited with code %d", code)
+		return fmt.Errorf("expected exit code %d, and the program exited with code %d\n%s", s.code, code, state.terminal.Frame().Report())
 	}
 	return nil
 }

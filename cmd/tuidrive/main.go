@@ -96,8 +96,10 @@ script names prints to stdout. With --out it is also saved as NAME.txt, NAME.sty
 and NAME.png. A script that names no frame prints the screen it ended on, as "end".
 
 A script of - reads from stdin. PATH is the only variable the program inherits, so
-anything else it should read goes through --env. A failed step prints the screen it
-was looking at and exits 1. A command line or script that cannot run exits 2.
+anything else it should read goes through --env. A step the program failed prints the
+screen it was looking at and exits 1, and so does a program that ended with a code
+other than 0 where no exits line named it. A command line or script that cannot run
+exits 2.
 
 ` + keyscript.Syntax,
 		Example: `  tuidrive run open-row.keys -- ./inbox

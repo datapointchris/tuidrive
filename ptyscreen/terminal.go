@@ -251,7 +251,7 @@ func (t *Terminal) Press(keys ...string) error {
 			return err
 		}
 		if err := t.sendInput(func() { t.emulator.SendKey(key) }); err != nil {
-			return fmt.Errorf("press %s: %w", name, err)
+			return err
 		}
 		if name == "esc" {
 			time.Sleep(escapeGap)
@@ -266,20 +266,40 @@ func (t *Terminal) Press(keys ...string) error {
 // goes through Press, because a program can read a burst in one read as one
 // multi-character key, which matches no binding.
 func (t *Terminal) Type(text string) error {
-	if err := t.sendInput(func() { t.emulator.SendText(text) }); err != nil {
-		return fmt.Errorf("type %q: %w", text, err)
-	}
-	return nil
+	return t.sendInput(func() { t.emulator.SendText(text) })
 }
 
 func (t *Terminal) sendInput(send func()) error {
 	t.mu.Lock()
-	defer t.mu.Unlock()
-	if t.hasExited {
-		return &ExitedError{Code: t.exitCode}
+	hasExited := t.hasExited
+	if !hasExited {
+		send()
+		t.lastActivity = time.Now()
 	}
-	send()
-	t.lastActivity = time.Now()
+	t.mu.Unlock()
+	if hasExited {
+		return t.exitedError()
+	}
+	return nil
+}
+
+func (t *Terminal) exitedError() *ExitedError {
+	t.awaitOutputDrained()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return &ExitedError{Code: t.exitCode, Frame: t.currentFrame()}
+}
+
+// FailedExit lets the output settle, then returns an ExitedError if the program
+// has ended with a code other than 0.
+func (t *Terminal) FailedExit() error {
+	t.Settle()
+	if !t.isExited() {
+		return nil
+	}
+	if failure := t.exitedError(); failure.Code != 0 {
+		return failure
+	}
 	return nil
 }
 
@@ -471,15 +491,17 @@ func (e *WaitError) Error() string {
 	} else {
 		fmt.Fprintf(&b, "timed out after %s waiting for %s", e.Elapsed.Round(time.Millisecond), e.Want)
 	}
-	fmt.Fprintf(&b, "\nscreen (%dx%d):\n%s", e.Frame.cols, e.Frame.rows, e.Frame.boxed())
+	fmt.Fprintf(&b, "\n%s", e.Frame.Report())
 	return b.String()
 }
 
-// ExitedError is a key pressed or text typed after the program ended.
+// ExitedError is a key pressed or text typed after the program ended, or an exit
+// nothing expected. It shows the screen the program left.
 type ExitedError struct {
-	Code int
+	Code  int
+	Frame Frame
 }
 
 func (e *ExitedError) Error() string {
-	return fmt.Sprintf("the program already exited with code %d", e.Code)
+	return fmt.Sprintf("the program already exited with code %d\n%s", e.Code, e.Frame.Report())
 }

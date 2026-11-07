@@ -87,6 +87,31 @@ func TestRunNamesTheFailedLineAndShowsTheScreen(t *testing.T) {
 	}
 }
 
+// A program that panics on a key is what a replay exists to catch, whichever line of
+// the script meets the crash.
+func TestRunReportsACrashWithTheScreen(t *testing.T) {
+	const crash = `printf ready; read -r _; printf 'panic: nil pointer'; exit 2`
+	failing := map[string]string{
+		"exits expects another code": "wait ready\npress enter\nexits\n",
+		"key after the crash":        "wait ready\npress enter\nwait panic\npress y\n",
+		"no exits line":              "wait ready\npress enter\nwait panic\nframe after\n",
+	}
+	for name, script := range failing {
+		t.Run(name, func(t *testing.T) {
+			_, err := runTool(t, script, "run", "-", "--", "sh", "-c", crash)
+			if err == nil {
+				t.Fatal("a crash passed")
+			}
+			if !strings.Contains(err.Error(), "panic: nil pointer") {
+				t.Errorf("failure lacks the crash text:\n%v", err)
+			}
+		})
+	}
+	if _, err := runTool(t, "wait ready\npress enter\nexits 2\n", "run", "-", "--", "sh", "-c", crash); err != nil {
+		t.Errorf("an exits line naming the code failed: %v", err)
+	}
+}
+
 func TestRunRefusesACommandLineThatCouldNeverRun(t *testing.T) {
 	cases := map[string][]string{
 		"no program":     {"run", "-"},

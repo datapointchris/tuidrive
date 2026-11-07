@@ -39,7 +39,9 @@ tuidrive run open-row.keys --out frames --env INBOX_DB=/tmp/inbox.db -- ./inbox
 - **Each run starts from clean state.** `PATH` is the only variable the program inherits, and
   `HOME` and every XDG directory sit under a scratch directory that is removed afterward. Point
   the program at its data with `--env`.
-- **A failed step exits 1 and prints the screen it was looking at**, with the script's line.
+- **A step the program failed exits 1 and prints the screen it was looking at**, with the script's
+  line. A program that ends with a code other than 0 fails the run too, unless an `exits` line names
+  that code.
 - **`tuidrive run --help` lists every verb and key.**
 
 ## Commit the same script as a test

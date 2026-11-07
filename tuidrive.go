@@ -3,8 +3,8 @@
 // keys, waits on named text, compares the screen with a text golden and a style
 // sidecar, and writes a frame as a PNG.
 //
-// Import it from _test.go files only. A failed step fails the test and prints the
-// screen it was looking at.
+// Import it from _test.go files only. A failed step fails the test. A step the
+// program failed also prints the screen it was looking at.
 //
 //	bin := tuidrive.Build(t, ".")
 //	term := tuidrive.Start(t, tuidrive.Program{Path: bin})
