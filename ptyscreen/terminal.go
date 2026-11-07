@@ -188,18 +188,26 @@ func (t *Terminal) pumpOutput() {
 }
 
 // pumpInput carries encoded keys and the emulator's replies to the program's
-// terminal queries. The emulator's input is an unbuffered pipe, so it keeps reading
-// after a failed write: a reply with no reader would block the emulator with mu
-// held, and the screen could not be read again.
+// terminal queries. They reach the emulator's unbuffered pipe with mu held, so this
+// never stops reading, and a queue stands between it and the pty. A write to the pty
+// blocks once a program stops reading its terminal, and with no queue that would
+// hold mu until the program ended, and no wait could time out.
+//
+// Close does not wait for the writer. The pty's master is in blocking mode, so a
+// write already stuck cannot be interrupted, and it keeps a thread and the master
+// until the process ends.
 func (t *Terminal) pumpInput() {
 	defer close(t.inputDone)
+	queue := newInputQueue()
+	go queue.writeTo(t.pty)
 	buf := make([]byte, 4096)
 	for {
 		n, err := t.emulator.Read(buf)
 		if n > 0 {
-			_, _ = t.pty.Write(buf[:n])
+			queue.add(buf[:n])
 		}
 		if err != nil {
+			queue.close()
 			return
 		}
 	}
@@ -427,7 +435,7 @@ func (t *Terminal) shutDown() error {
 		problems = append(problems, errors.New("the pty read did not end"))
 	}
 	if !t.waitOn(t.inputDone, closeLimit) {
-		problems = append(problems, errors.New("the pty write did not end"))
+		problems = append(problems, errors.New("the emulator's input read did not end"))
 	}
 	_ = t.emulator.Close()
 	if err := os.RemoveAll(t.scratch); err != nil {

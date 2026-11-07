@@ -41,7 +41,11 @@ replays scripts. `cmd/tuidrive` is a command over those two, with no `testing` i
 ## Emulator facts the code relies on
 
 - **`x/vt` answers terminal queries through an unbuffered pipe.** With no reader, the emulator
-  blocks in `Write`. `pumpInput` never stops reading, for that reason.
+  blocks in `Write` with `mu` held. So `pumpInput` never stops reading, and it hands what it reads
+  to a queue, because a write to the pty blocks once a program stops reading its terminal.
+- **`creack/pty` leaves the pty's master in blocking mode.** A read or write of it can never be
+  interrupted by closing it. A write stuck at `Close` stays stuck until the process ends, so nothing
+  waits for it.
 - **`Emulator.Read` and `Emulator.Close` touch `closed` with no lock.** So shutdown closes the
   input pipe, waits for the reader to end, and only then closes the emulator.
 - **`SendKey` silently drops a combination it has no encoding for**, such as `ctrl+up`. `ParseKey`
