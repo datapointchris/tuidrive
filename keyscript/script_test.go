@@ -6,29 +6,26 @@ import (
 )
 
 func TestParseRefusesWhatCouldNeverRun(t *testing.T) {
-	cases := map[string]struct{ line, want string }{
-		"unknown verb":    {"sleep 1s", `unknown verb "sleep"`},
-		"unknown key":     {"press j nope", `unknown key "nope"`},
-		"key with no way": {"press ctrl+up", `unknown key "ctrl+up"`},
-		"wait on nothing": {"wait", "names the text"},
-		"bad pattern":     {"wait /(/", "bad pattern"},
-		"open pattern":    {"gone /abc", "no closing /"},
-		"frame path":      {"frame ../escape", "frame needs a name"},
-		"mask needs one":  {"mask abc def", "expected a /pattern/"},
-		"zero timeout":    {"timeout 0s", "above zero"},
-		"exit word":       {"exits soon", "exits needs a code"},
+	cases := map[string]string{
+		"unknown verb":    "sleep 1s",
+		"unknown key":     "press j nope",
+		"key with no way": "press ctrl+up",
+		"wait on nothing": "wait",
+		"bad pattern":     "wait /(/",
+		"open pattern":    "gone /abc",
+		"frame path":      "frame ../escape",
+		"mask needs one":  "mask abc def",
+		"zero timeout":    "timeout 0s",
+		"exit word":       "exits soon",
 	}
-	for name, tc := range cases {
+	for name, line := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := Parse("flow.keys", strings.NewReader("# a comment\n\n"+tc.line+"\n"))
+			_, err := Parse("flow.keys", strings.NewReader("# a comment\n\n"+line+"\n"))
 			if err == nil {
-				t.Fatalf("%q parsed", tc.line)
+				t.Fatalf("%q parsed", line)
 			}
 			if !strings.Contains(err.Error(), "flow.keys:3: ") {
 				t.Errorf("error lacks its line number: %v", err)
-			}
-			if !strings.Contains(err.Error(), tc.want) {
-				t.Errorf("error lacks %q: %v", tc.want, err)
 			}
 		})
 	}

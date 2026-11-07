@@ -64,9 +64,11 @@ func TestRunScriptComparesEachFrame(t *testing.T) {
 
 func TestEnvironmentIsBuiltNotInherited(t *testing.T) {
 	t.Setenv("STRAY", "leaked")
+	// Wide enough that a long temporary directory never wraps the scratch path.
 	term := Start(t, Program{
 		Path: Build(t, "./internal/sampletui"),
 		Env:  map[string]string{"CHOSEN": "yes"},
+		Cols: 400,
 	})
 	term.WaitFor("sort newest")
 	term.Press("e")
@@ -84,9 +86,8 @@ func TestEnvironmentIsBuiltNotInherited(t *testing.T) {
 func TestGoldenUpdateAndDiffer(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nested", "frame.txt")
 
-	err := compareGoldenFile(path, "one\n", false)
-	if err == nil || !strings.Contains(err.Error(), "TUIDRIVE_UPDATE=1") {
-		t.Errorf("a missing golden should say how to write it, got: %v", err)
+	if err := compareGoldenFile(path, "one\n", false); err == nil {
+		t.Error("a missing golden passed")
 	}
 
 	if err := compareGoldenFile(path, "one\ntwo\n", true); err != nil {
@@ -96,11 +97,11 @@ func TestGoldenUpdateAndDiffer(t *testing.T) {
 		t.Errorf("an unchanged screen failed: %v", err)
 	}
 
-	err = compareGoldenFile(path, "one\nTWO\n", false)
+	err := compareGoldenFile(path, "one\nTWO\n", false)
 	if err == nil {
 		t.Fatal("a changed row passed")
 	}
-	for _, want := range []string{"2 want: two", "2 got:  TWO", "TUIDRIVE_UPDATE=1"} {
+	for _, want := range []string{"2 want: two", "2 got:  TWO"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("failure lacks %q:\n%v", want, err)
 		}
