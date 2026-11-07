@@ -35,8 +35,12 @@ const (
 	terminateGrace = 2 * time.Second
 	// closeLimit bounds how long Close waits on each stream it has shut.
 	closeLimit = 2 * time.Second
+	// keyGap follows every key, so a program reads it alone. Bubble Tea v1 turns a
+	// burst of characters in one read into one key, and "jj" matches no binding.
+	keyGap = 5 * time.Millisecond
 	// escapeGap follows an escape key. A key arriving sooner reads as alt plus
-	// that key, and a terminal input parser waits about 50ms to tell them apart.
+	// that key, and a terminal input parser waits a short timeout to tell them
+	// apart, DefaultEscTimeout in ultraviolet.
 	escapeGap = 75 * time.Millisecond
 )
 
@@ -243,13 +247,15 @@ func (t *Terminal) Press(keys ...string) error {
 		}
 		if name == "esc" {
 			time.Sleep(escapeGap)
+		} else {
+			time.Sleep(keyGap)
 		}
 	}
 	return nil
 }
 
-// Type sends text as typed characters. It is for a text field. A keybinding
-// goes through Press, because a program reads typed text in one read as one
+// Type sends text as one burst of characters. It is for a text field. A keybinding
+// goes through Press, because a program can read a burst in one read as one
 // multi-character key, which matches no binding.
 func (t *Terminal) Type(text string) error {
 	if err := t.sendInput(func() { t.emulator.SendText(text) }); err != nil {

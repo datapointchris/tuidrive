@@ -2,6 +2,8 @@ package ptyscreen
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -75,6 +77,65 @@ func TestWaitReadsOnlyFinishedFrames(t *testing.T) {
 	}
 	if elapsed := time.Since(started); elapsed > hold+2*time.Second {
 		t.Errorf("the closed update took %s to show", elapsed)
+	}
+}
+
+// A Bubble Tea v1 program reads `press j j` in one read as the one key "jj", which
+// matches no binding, so the cursor stays put and no step fails.
+func TestPressGivesEachKeyItsOwnRead(t *testing.T) {
+	if os.Getenv("PTYSCREEN_COUNT_READS") == "1" {
+		printEachRead()
+		return
+	}
+	self, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	term, err := Open(Program{
+		Path: "sh",
+		Args: []string{"-c", `stty raw -echo; exec "$0" -test.run='^TestPressGivesEachKeyItsOwnRead$'`, self},
+		Env:  map[string]string{"PTYSCREEN_COUNT_READS": "1"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = term.Close() })
+	if err := term.WaitFor("bytes=0 reads=0"); err != nil {
+		t.Fatal(err)
+	}
+
+	const keys = 12
+	for range keys {
+		if err := term.Press("j"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := term.WaitFor(fmt.Sprintf("bytes=%d ", keys)); err != nil {
+		t.Fatal(err)
+	}
+	var reads int
+	if _, err := fmt.Sscanf(term.Frame().Text(), "bytes=%d reads=%d", new(int), &reads); err != nil {
+		t.Fatal(err)
+	}
+	if reads <= keys/2 {
+		t.Errorf("%d keys arrived in %d reads", keys, reads)
+	}
+}
+
+// printEachRead takes a moment between reads, as a program does while it handles
+// what it read.
+func printEachRead() {
+	buf := make([]byte, 256)
+	bytes, reads := 0, 0
+	for {
+		fmt.Printf("\rbytes=%d reads=%d ", bytes, reads)
+		time.Sleep(2 * time.Millisecond)
+		n, err := os.Stdin.Read(buf)
+		if err != nil {
+			return
+		}
+		bytes += n
+		reads++
 	}
 }
 
