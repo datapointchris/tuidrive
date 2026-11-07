@@ -42,7 +42,8 @@ replays scripts. `cmd/tuidrive` is a command over those two, with no `testing` i
   - `bubbletea/v2` and `ultraviolet` sit at the versions this module's Bubble Tea v2 consumers run,
     so `internal/sampletui` compiling here proves `x/vt` builds against what they ship. Bubble Tea
     v2.0.0 also passes the suite, and it would narrow those moves without ending them.
-  - `x/image` decides `x/sys` and `x/text`.
+  - `x/image` decides `x/text`, and sits at the first release past the advisory `govulncheck` finds
+    through font drawing.
   - `go get @latest` and `go get -u` raise these, and `go get` leaves an indirect line high after a
     direct one comes down, so check `go.mod` after either.
 

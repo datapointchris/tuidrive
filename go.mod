@@ -14,7 +14,7 @@ require (
 	github.com/datapointchris/goselfupdate v0.11.0
 	github.com/go-fonts/dejavu v0.3.4
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/image v0.18.0
+	golang.org/x/image v0.39.0
 )
 
 require (
@@ -36,5 +36,5 @@ require (
 	github.com/xo/terminfo v1.0.0 // indirect
 	golang.org/x/sync v0.22.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.16.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 )
