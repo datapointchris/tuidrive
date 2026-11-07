@@ -1,0 +1,18 @@
+# Waits name text, because the sample holds a blank frame while it loads.
+wait sort newest
+mask /\d+s ago/ <age>
+frame list
+press j j enter
+wait kind: link
+frame opened
+press esc
+gone kind: link
+press /
+wait filter:
+type abc
+wait filter: abc
+press enter
+wait filter abc
+frame filtered
+press q
+exits

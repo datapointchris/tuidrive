@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+# Two pushes to main inside one run's window would otherwise race to cut the
+# same version. Never cancel-in-progress: a canceled release can leave a tag
+# with no release.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # A public module ships as a git tag, and the proxy caches a tagged version
+  # permanently, so the tagged commit must be green first.
+  validate:
+    uses: ./.github/workflows/validate.yml
+
+  release:
+    needs: [validate]
+    uses: datapointchris/reusable-workflows/.github/workflows/go-semantic-release.yml@v1
+    permissions:
+      contents: write
+    with:
+      # Keeps this on 0.x. Without it go-semantic-release forces a major bump on
+      # any change while the major is 0.
+      allow-initial-development-versions: true
+      goreleaser: true
+      # A tag exists before the module proxy has fetched it, and both pkg.go.dev
+      # and `go get <module>@latest` read that proxy.
+      prime-module-proxy: true
