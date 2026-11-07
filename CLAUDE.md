@@ -27,16 +27,24 @@ replays scripts. `cmd/tuidrive` is a command over those two, with no `testing` i
   masks.** A mask must never hide what a wait expects.
 - **`Style` leaves out what nothing paints.** A renderer may or may not carry a foreground
   across a blank, so goldens captured under one Bubble Tea version compare against another.
-- **Colors print as palette indexes.** A consumer's colors are 0-15 and follow the terminal's
-  theme, so a golden pins the index and never an RGB value.
+- **A color with a palette index prints as that index.** A consumer's colors are 0-15 and follow
+  the terminal's theme, so a golden pins the index. A truecolor value has no index and prints as
+  `#rrggbb`.
 - **Golden updates go through `TUIDRIVE_UPDATE`, not a flag.** A package-level `-update` panics
   when a test binary also imports another package that registers one, and a flag fails in any
   package under `./...` that does not import this one.
-- **`bubbletea/v2` and `ultraviolet` stay at the lowest version that works.** A consumer's build
-  takes the highest version any dependency asks for, so a higher floor here changes a shipped
-  program's renderer because of a test dependency. `go mod tidy` and `go get @latest` raise
-  them, and `internal/sampletui` compiling in this module is what proves `x/vt` builds against
-  the ultraviolet Bubble Tea asks for.
+- **Every requirement in `go.mod` stays as low as it can, indirect ones included.** A consumer's
+  build takes the highest version any dependency asks for, so a floor here changes what a consumer
+  ships because of a test dependency.
+  - `x/vt` asks for `x/ansi`, `go-runewidth`, `displaywidth`, `uax29`, `colorprofile` and
+    `go-colorful` above what a Bubble Tea v1 program has, so those move whatever this module does.
+    The README says so.
+  - `bubbletea/v2` and `ultraviolet` sit at the versions this module's Bubble Tea v2 consumers run,
+    so `internal/sampletui` compiling here proves `x/vt` builds against what they ship. Bubble Tea
+    v2.0.0 also passes the suite, and it would narrow those moves without ending them.
+  - `x/image` decides `x/sys` and `x/text`.
+  - `go get @latest` and `go get -u` raise these, and `go get` leaves an indirect line high after a
+    direct one comes down, so check `go.mod` after either.
 
 ## Emulator facts the code relies on
 
@@ -56,10 +64,11 @@ replays scripts. `cmd/tuidrive` is a command over those two, with no `testing` i
 
 ## Never write the breaking-change trailer in a commit message
 
-Those two words — either number, colon or not, subject or body — cut a major
-release here, and the module path carries no `/vN` suffix, so once a major
-exists `go install …@latest` resolves the highest v1 instead and every installed
-copy is stranded. The analyzer matches them unanchored against the raw message,
-so no config prevents it and it majors even a `fix:` commit. **The ban covers a
-commit that merely discusses the trailer**; name it some other way and never
-quote it. Deliberate majors use `chore(release-major)`.
+Those two words — either number, colon or not, subject or body — mark a major. On
+0.x, `allow-initial-development-versions` turns that into a minor. From v1 on they
+tag v2, and the module path carries no `/v2` suffix, so `go install …@latest` stays
+on the highest v1 and every installed copy is stranded. The analyzer matches them
+unanchored against the raw message, so no config prevents it and it majors even a
+`fix:` commit. **The ban covers a commit that merely discusses the trailer**; name
+it some other way and never quote it. Deliberate majors use `chore(release-major)`,
+which on 0.x also cuts a minor until that setting comes off.
