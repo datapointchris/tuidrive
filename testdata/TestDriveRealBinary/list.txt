@@ -1,0 +1,7 @@
+inbox  sort newest
+
+  first row    new  <age>
+  second row   done  <age>
+  third row    new  <age>
+
+j k move  enter open  / filter  e env  q quit
