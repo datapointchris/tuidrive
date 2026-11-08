@@ -15,7 +15,7 @@ The font gathers these icon sets, each under its own license. Each upstream is a
 | extraglyphs            | `source-foundry/Hack`                | -               | MIT         |
 | Font Awesome           | `FortAwesome/Font-Awesome`           | 6.5.1           | CC BY 4.0   |
 | Font Awesome Extension | `AndreLZGava/font-awesome-extension` | 0.0.3           | MIT         |
-| Font Logos             | `lukas-w/font-logos`                 | 1.3.0           | unlicensed  |
+| Font Logos             | `lukas-w/font-logos`                 | 1.3.0           | Unlicense   |
 | MaterialDesign         | `Templarian/MaterialDesign-Font`     | Oct 6, 2022     | Apache 2.0  |
 | Octicons               | `primer/octicons`                    | 18.3.0          | MIT         |
 | Seti and original      | `jesseweed/seti-ui`                  | 0.8.1           | MIT         |
