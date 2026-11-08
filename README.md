@@ -106,7 +106,9 @@ modules your program ships with. Compare `go list -m all` before and after.
   A color reads as its palette index where it has one, and `#rrggbb` where it does not. A plain
   space neither ends a run nor starts one, so a color change diffs as one line.
 - **The PNG** is the screen as it stood, colors included. It paints palette colors with the Tango
-  palette, because the indexes alone do not say what your terminal shows.
+  palette, because the indexes alone do not say what your terminal shows. Text draws in DejaVu Sans
+  Mono, and a symbol DejaVu has no glyph for draws from Nerd Fonts' Symbols Nerd Font Mono, so a
+  program's Nerd Font icons show as they do in a patched terminal font.
 
 ## Keep a golden stable
 

@@ -1,11 +1,15 @@
 package ptyscreen
 
 import (
+	"bytes"
+	"compress/gzip"
+	"embed"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"image/png"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -18,8 +22,15 @@ import (
 	"github.com/go-fonts/dejavu/dejavusansmonooblique"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/font/sfnt"
 	"golang.org/x/image/math/fixed"
 )
+
+// nerdFontSymbols is Nerd Fonts' Symbols Nerd Font Mono, split at Material Design's plane so
+// each half stays under a megabyte, unhinted because x/image runs no hinting program.
+//
+//go:embed nerdfontsymbols/material-design.ttf.gz nerdfontsymbols/all-but-material-design.ttf.gz
+var nerdFontSymbols embed.FS
 
 // The cell box fits DejaVu Sans Mono at 16 pixels, whose advance is 9.6 and whose
 // ascent and descent total 18.6, so box-drawing lines meet across cells.
@@ -58,8 +69,17 @@ var (
 	}
 )
 
+// faceSet draws text in DejaVu Sans Mono, and a symbol DejaVu has no glyph for in the
+// first symbols font that has one.
 type faceSet struct {
 	regular, bold, oblique, boldOblique font.Face
+	dejavu                              *sfnt.Font
+	symbols                             []symbolFace
+}
+
+type symbolFace struct {
+	font *sfnt.Font
+	face font.Face
 }
 
 var loadFaces = sync.OnceValues(func() (faceSet, error) {
@@ -74,13 +94,74 @@ var loadFaces = sync.OnceValues(func() (faceSet, error) {
 		if err != nil {
 			return faceSet{}, fmt.Errorf("parse font: %w", err)
 		}
-		*face, err = opentype.NewFace(parsed, &opentype.FaceOptions{Size: fontSize, DPI: 72, Hinting: font.HintingFull})
-		if err != nil {
-			return faceSet{}, fmt.Errorf("load font: %w", err)
+		if ttf == &dejavusansmono.TTF {
+			faces.dejavu = parsed
 		}
+		if *face, err = newFace(parsed); err != nil {
+			return faceSet{}, err
+		}
+	}
+	for _, name := range []string{"material-design.ttf.gz", "all-but-material-design.ttf.gz"} {
+		parsed, err := parseGzipped("nerdfontsymbols/" + name)
+		if err != nil {
+			return faceSet{}, err
+		}
+		face, err := newFace(parsed)
+		if err != nil {
+			return faceSet{}, err
+		}
+		faces.symbols = append(faces.symbols, symbolFace{font: parsed, face: face})
 	}
 	return faces, nil
 })
+
+func newFace(parsed *sfnt.Font) (font.Face, error) {
+	face, err := opentype.NewFace(parsed, &opentype.FaceOptions{Size: fontSize, DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return nil, fmt.Errorf("load font: %w", err)
+	}
+	return face, nil
+}
+
+func parseGzipped(path string) (*sfnt.Font, error) {
+	packed, err := nerdFontSymbols.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read font %s: %w", path, err)
+	}
+	reader, err := gzip.NewReader(bytes.NewReader(packed))
+	if err != nil {
+		return nil, fmt.Errorf("read font %s: %w", path, err)
+	}
+	ttf, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("read font %s: %w", path, err)
+	}
+	parsed, err := opentype.Parse(ttf)
+	if err != nil {
+		return nil, fmt.Errorf("parse font %s: %w", path, err)
+	}
+	return parsed, nil
+}
+
+// face is DejaVu's in the cell's style, unless the cell holds one rune DejaVu has no glyph
+// for and a symbols font has one.
+func (faces faceSet) face(text string, attrs uint8) font.Face {
+	runes := []rune(text)
+	if len(runes) != 1 || hasGlyph(faces.dejavu, runes[0]) {
+		return chooseFace(faces, attrs)
+	}
+	for _, symbol := range faces.symbols {
+		if hasGlyph(symbol.font, runes[0]) {
+			return symbol.face
+		}
+	}
+	return chooseFace(faces, attrs)
+}
+
+func hasGlyph(f *sfnt.Font, r rune) bool {
+	index, err := f.GlyphIndex(nil, r)
+	return err == nil && index != 0
+}
 
 // Image draws the screen as it stood, colors included, whatever masks the frame
 // carries.
@@ -153,7 +234,7 @@ func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, i
 		drawer := font.Drawer{
 			Dst:  canvas,
 			Src:  image.NewUniform(fg),
-			Face: chooseFace(faces, style.Attrs),
+			Face: faces.face(cell.text, style.Attrs),
 			Dot:  fixed.P(left, top+baseline),
 		}
 		drawer.DrawString(cell.text)
