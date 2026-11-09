@@ -30,6 +30,9 @@ replays scripts. `cmd/tuidrive` is a command over those two, with no `testing` i
 - **A color with a palette index prints as that index.** A consumer's colors are 0-15 and follow
   the terminal's theme, so a golden pins the index. A truecolor value has no index and prints as
   `#rrggbb`.
+- **A run checking a truecolor color passes `--env COLORTERM=truecolor`.** `environ` sets
+  `TERM=xterm-256color` and no `COLORTERM`, so Bubble Tea detects 256 colors and rounds every
+  24-bit color before writing: a theme's `#2b3b51` records as `bg=23`.
 - **Golden updates go through `TUIDRIVE_UPDATE`, not a flag.** A package-level `-update` panics
   when a test binary also imports another package that registers one, and a flag fails in any
   package under `./...` that does not import this one.
