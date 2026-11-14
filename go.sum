@@ -35,6 +35,8 @@ github.com/datapointchris/goclikit v0.5.3 h1:6ec9nuswLXeIqZLa0YVEQeqsCnrjkqF/3gD
 github.com/datapointchris/goclikit v0.5.3/go.mod h1:hEbplQyvrWq5m5UepXVNKfv8jvvlmQshNMrWdoHBb6Y=
 github.com/datapointchris/goselfupdate v0.11.0 h1:aUJ27Cm9ZNGMfC7+kKChBsnm8offBE99wwUa10lFo2w=
 github.com/datapointchris/goselfupdate v0.11.0/go.mod h1:YcgyvM+wH6nh9zo9xioUqTHeH5HTYeCHevv4U+G7INc=
+github.com/datapointchris/gotermstyle v0.6.0 h1:udz3/YAib//g5TUVacfHJaYlbuisyk005JyL5ed4B4c=
+github.com/datapointchris/gotermstyle v0.6.0/go.mod h1:pKINTy5wt7+1No+qXub+BoyOeZiLC/MYunXL/l9i1j4=
 github.com/go-fonts/dejavu v0.3.4 h1:Qqyx9IOs5CQFxyWTdvddeWzrX0VNwUAvbmAzL0fpjbc=
 github.com/go-fonts/dejavu v0.3.4/go.mod h1:D1z0DglIz+lmpeNYMYlxW4r22IhcdOYnt+R3PShU/Kg=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=

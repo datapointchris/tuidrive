@@ -19,6 +19,7 @@ import (
 	"github.com/datapointchris/goclikit"
 	"github.com/datapointchris/goselfupdate"
 	"github.com/datapointchris/goselfupdate/autoupdate"
+	"github.com/datapointchris/gotermstyle/cobrahelp"
 	"github.com/spf13/cobra"
 
 	"github.com/datapointchris/tuidrive/keyscript"
@@ -104,6 +105,7 @@ that shows a bug replays the same way every time, and a Go test can commit it.`,
 	// Registered here because cobra's own version flag takes -v, which is for verbosity.
 	root.Flags().Bool("version", false, "print the version")
 	root.AddCommand(runCommand(), goclikit.UpdateCommand(updateConfig()))
+	cobrahelp.Install(root)
 	return root
 }
 
