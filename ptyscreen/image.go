@@ -74,7 +74,6 @@ var (
 type faceSet struct {
 	regular, bold, oblique, boldOblique font.Face
 	dejavu                              *sfnt.Font
-	symbols                             []symbolFace
 }
 
 type symbolFace struct {
@@ -101,18 +100,25 @@ var loadFaces = sync.OnceValues(func() (faceSet, error) {
 			return faceSet{}, err
 		}
 	}
+	return faces, nil
+})
+
+// loadSymbolFaces runs only once a cell holds a rune DejaVu lacks, because the two symbol
+// fonts decompress to a few megabytes and most screens never need them.
+var loadSymbolFaces = sync.OnceValues(func() ([]symbolFace, error) {
+	var symbols []symbolFace
 	for _, name := range []string{"material-design.ttf.gz", "all-but-material-design.ttf.gz"} {
 		parsed, err := parseGzipped("nerdfontsymbols/" + name)
 		if err != nil {
-			return faceSet{}, err
+			return nil, err
 		}
 		face, err := newFace(parsed)
 		if err != nil {
-			return faceSet{}, err
+			return nil, err
 		}
-		faces.symbols = append(faces.symbols, symbolFace{font: parsed, face: face})
+		symbols = append(symbols, symbolFace{font: parsed, face: face})
 	}
-	return faces, nil
+	return symbols, nil
 })
 
 func newFace(parsed *sfnt.Font) (font.Face, error) {
@@ -145,17 +151,21 @@ func parseGzipped(path string) (*sfnt.Font, error) {
 
 // face is DejaVu's in the cell's style, unless the cell holds one rune DejaVu has no glyph
 // for and a symbols font has one.
-func (faces faceSet) face(text string, attrs uint8) font.Face {
+func (faces faceSet) face(text string, attrs uint8) (font.Face, error) {
 	runes := []rune(text)
 	if len(runes) != 1 || hasGlyph(faces.dejavu, runes[0]) {
-		return chooseFace(faces, attrs)
+		return chooseFace(faces, attrs), nil
 	}
-	for _, symbol := range faces.symbols {
+	symbols, err := loadSymbolFaces()
+	if err != nil {
+		return nil, err
+	}
+	for _, symbol := range symbols {
 		if hasGlyph(symbol.font, runes[0]) {
-			return symbol.face
+			return symbol.face, nil
 		}
 	}
-	return chooseFace(faces, attrs)
+	return chooseFace(faces, attrs), nil
 }
 
 func hasGlyph(f *sfnt.Font, r rune) bool {
@@ -176,7 +186,9 @@ func (f Frame) Image() (image.Image, error) {
 		col := 0
 		for _, cell := range row {
 			isCursor := f.cursorVisible && y == f.cursorRow && col == f.cursorCol
-			drawCell(canvas, faces, col, y, cell, isCursor)
+			if err := drawCell(canvas, faces, col, y, cell, isCursor); err != nil {
+				return nil, err
+			}
 			col += cell.width
 		}
 	}
@@ -206,7 +218,7 @@ func (f Frame) WritePNG(path string) error {
 	return nil
 }
 
-func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, isCursor bool) {
+func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, isCursor bool) error {
 	style := cell.style
 	fg := resolveColor(style.Fg, defaultForeground)
 	bg := resolveColor(style.Bg, defaultBackground)
@@ -231,10 +243,14 @@ func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, i
 	case braille:
 		drawBraille(canvas, left, top, pattern, fg)
 	default:
+		face, err := faces.face(cell.text, style.Attrs)
+		if err != nil {
+			return err
+		}
 		drawer := font.Drawer{
 			Dst:  canvas,
 			Src:  image.NewUniform(fg),
-			Face: faces.face(cell.text, style.Attrs),
+			Face: face,
 			Dot:  fixed.P(left, top+baseline),
 		}
 		drawer.DrawString(cell.text)
@@ -246,6 +262,7 @@ func drawCell(canvas *image.RGBA, faces faceSet, col, row int, cell frameCell, i
 	if style.Attrs&uv.AttrStrikethrough != 0 {
 		draw.Draw(canvas, image.Rect(box.Min.X, top+strikeAt, box.Max.X, top+strikeAt+1), image.NewUniform(fg), image.Point{}, draw.Src)
 	}
+	return nil
 }
 
 // brailleDots places each of a braille pattern's eight dots by its bit, as a column and a row.
