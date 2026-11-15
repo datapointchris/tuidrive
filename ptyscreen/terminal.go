@@ -145,7 +145,7 @@ func Open(program Program) (*Terminal, error) {
 // the bracket opened is the last whole frame, until the bracket closes.
 func (t *Terminal) onModeEnabled(mode ansi.Mode) {
 	if mode == ansi.ModeSynchronizedOutput {
-		t.lastFinished = t.captureFrame()
+		t.captureInto(&t.lastFinished)
 		t.synchronizing = true
 	}
 }
@@ -338,7 +338,7 @@ func (t *Terminal) SettledFrame() Frame {
 
 func (t *Terminal) currentFrame() Frame {
 	if t.synchronizing {
-		return t.lastFinished
+		return t.lastFinished.clone()
 	}
 	return t.captureFrame()
 }

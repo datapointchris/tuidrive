@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image/color"
 	"regexp"
+	"slices"
 	"strings"
 
 	uv "github.com/charmbracelet/ultraviolet"
@@ -32,10 +33,27 @@ type frameCell struct {
 // captureFrame copies the emulator's cells. The caller holds mu, or is the
 // emulator's own callback.
 func (t *Terminal) captureFrame() Frame {
+	var f Frame
+	t.captureInto(&f)
+	return f
+}
+
+// captureInto copies the emulator's cells into f, writing over f's own rows
+// wherever the screen's size lets it, so a frame captured on every synchronized
+// update allocates only when the screen is resized. Nothing else may hold f's
+// rows, so a frame filled this way is handed out only through clone. The caller
+// holds mu, or is the emulator's own callback.
+func (t *Terminal) captureInto(f *Frame) {
 	cols, rows := t.emulator.Width(), t.emulator.Height()
-	cells := make([][]frameCell, rows)
+	cells := f.drawn
+	if len(cells) != rows {
+		cells = make([][]frameCell, rows)
+	}
 	for y := range rows {
-		row := make([]frameCell, 0, cols)
+		row := cells[y][:0]
+		if cap(row) < cols {
+			row = make([]frameCell, 0, cols)
+		}
 		for x := 0; x < cols; {
 			cell := t.cellAt(x, y)
 			row = append(row, cell)
@@ -44,7 +62,7 @@ func (t *Terminal) captureFrame() Frame {
 		cells[y] = row
 	}
 	cursor := t.emulator.CursorPosition()
-	return Frame{
+	*f = Frame{
 		cols:          cols,
 		rows:          rows,
 		shown:         cells,
@@ -53,6 +71,18 @@ func (t *Terminal) captureFrame() Frame {
 		cursorCol:     cursor.X,
 		cursorVisible: !t.emulator.CursorHidden(),
 	}
+}
+
+// clone returns a copy of a frame captureInto filled, sharing no cells with it,
+// so the next capture into the original leaves the copy as it was.
+func (f Frame) clone() Frame {
+	cells := make([][]frameCell, len(f.drawn))
+	for y, row := range f.drawn {
+		cells[y] = slices.Clone(row)
+	}
+	f.shown = cells
+	f.drawn = cells
+	return f
 }
 
 // cellAt reads one emulator cell, as a space of width 1 where the emulator holds
