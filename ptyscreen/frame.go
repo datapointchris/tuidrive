@@ -1,6 +1,7 @@
 package ptyscreen
 
 import (
+	"bytes"
 	"fmt"
 	"image/color"
 	"regexp"
@@ -36,20 +37,9 @@ func (t *Terminal) captureFrame() Frame {
 	for y := range rows {
 		row := make([]frameCell, 0, cols)
 		for x := 0; x < cols; {
-			width := 1
-			text := " "
-			var style uv.Style
-			if cell := t.emulator.CellAt(x, y); cell != nil {
-				style = cell.Style
-				if cell.Content != "" {
-					text = cell.Content
-				}
-				if cell.Width > 1 {
-					width = cell.Width
-				}
-			}
-			row = append(row, frameCell{text: text, width: width, style: style})
-			x += width
+			cell := t.cellAt(x, y)
+			row = append(row, cell)
+			x += cell.width
 		}
 		cells[y] = row
 	}
@@ -63,6 +53,54 @@ func (t *Terminal) captureFrame() Frame {
 		cursorCol:     cursor.X,
 		cursorVisible: !t.emulator.CursorHidden(),
 	}
+}
+
+// cellAt reads one emulator cell, as a space of width 1 where the emulator holds
+// none. The caller holds mu, or is the emulator's own callback.
+func (t *Terminal) cellAt(x, y int) frameCell {
+	cell := frameCell{text: " ", width: 1}
+	if c := t.emulator.CellAt(x, y); c != nil {
+		cell.style = c.Style
+		if c.Content != "" {
+			cell.text = c.Content
+		}
+		if c.Width > 1 {
+			cell.width = c.Width
+		}
+	}
+	return cell
+}
+
+// screenText is what currentFrame().rawText() returns, read straight from the
+// emulator. A wait reads it on every output, and needs the text alone, so it
+// skips building a frame of cells only to join them. The caller holds mu.
+func (t *Terminal) screenText() string {
+	if t.synchronizing {
+		return t.lastFinished.rawText()
+	}
+	cols, rows := t.emulator.Width(), t.emulator.Height()
+	var screen strings.Builder
+	var line []byte
+	blankRows := 0
+	for y := range rows {
+		line = line[:0]
+		for x := 0; x < cols; {
+			cell := t.cellAt(x, y)
+			line = append(line, cell.text...)
+			x += cell.width
+		}
+		line = bytes.TrimRight(line, " ")
+		if len(line) == 0 {
+			blankRows++
+			continue
+		}
+		for ; blankRows > 0; blankRows-- {
+			screen.WriteByte('\n')
+		}
+		screen.Write(line)
+		screen.WriteByte('\n')
+	}
+	return screen.String()
 }
 
 // Size returns the screen's columns and rows.

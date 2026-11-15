@@ -391,13 +391,13 @@ func (t *Terminal) wait(want string, holds func(screen string) bool) error {
 			t.awaitOutputDrained()
 		}
 		t.mu.Lock()
-		frame := t.currentFrame()
+		screen := t.screenText()
 		quietFor := time.Since(t.lastActivity)
 		code := t.exitCode
 		t.mu.Unlock()
 
 		pause := time.Until(deadline)
-		if holds(frame.rawText()) {
+		if holds(screen) {
 			if heldSince.IsZero() {
 				heldSince = time.Now()
 			}
@@ -408,7 +408,16 @@ func (t *Terminal) wait(want string, holds func(screen string) bool) error {
 		} else {
 			heldSince = time.Time{}
 			if hasExited || pause <= 0 {
-				return &WaitError{Want: want, Elapsed: time.Since(started), Frame: frame, Exited: hasExited, ExitCode: code}
+				// The frame is read after the text, so it may have changed since.
+				// A frame that now holds goes round again rather than fail on a
+				// screen that shows what the wait wanted.
+				t.mu.Lock()
+				frame := t.currentFrame()
+				t.mu.Unlock()
+				if !holds(frame.rawText()) {
+					return &WaitError{Want: want, Elapsed: time.Since(started), Frame: frame, Exited: hasExited, ExitCode: code}
+				}
+				continue
 			}
 		}
 
