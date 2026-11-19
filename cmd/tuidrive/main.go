@@ -92,11 +92,12 @@ func rootCommand() *cobra.Command {
 		Long: `tuidrive runs a terminal program's real binary on a pty at a fixed size, presses
 keys, waits on named text, and prints or saves the screen.
 
-Every run starts the program from clean state: a built environment, with HOME and
-every XDG directory under a scratch directory that is removed afterward. So a script
-that shows a bug replays the same way every time, and a Go test can commit it.`,
+Every run starts the program from clean state: a built environment, with HOME
+and every XDG directory under a scratch directory that is removed afterward. So
+a script that shows a bug replays the same way every time, and a Go test can
+commit it.`,
 		Example: `  tuidrive run open-row.keys -- ./inbox
-  tuidrive run open-row.keys --out frames --env INBOX_DB=/tmp/inbox.db -- ./inbox`,
+  tuidrive run open-row.keys --env INBOX_DB=/tmp/inbox.db -- ./inbox`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       buildVersion(),
@@ -123,20 +124,21 @@ func runCommand() *cobra.Command {
 		Use:   "run <script> [flags] -- <program> [args...]",
 		Short: "Replay a key script against a program, and print or save its frames",
 		Long: `Replay a key script against a program started from clean state. Each frame the
-script names prints to stdout, and its time since the start prints to stderr. With
---out it is also saved as NAME.txt, NAME.style and NAME.png. A script that names no
-frame prints the screen it ended on, as "end".
+script names prints to stdout, and its time since the start prints to stderr.
+With --out it is also saved as NAME.txt, NAME.style and NAME.png. A script that
+names no frame prints the screen it ended on, as "end".
 
-A script of - reads from stdin. PATH is the only variable the program inherits, so
-anything else it should read goes through --env. A step the program failed prints the
-screen it was looking at and exits 1, and so does a program that ended with a code
-other than 0 where no exits line named it. A command line or script that cannot run
-exits 2.
+A script of - reads from stdin. PATH is the only variable the program inherits,
+so anything else it should read goes through --env. A step the program failed
+prints the screen it was looking at and exits 1, and so does a program that
+ended with a code other than 0 where no exits line named it. A command line or
+script that cannot run exits 2.
 
 ` + keyscript.Syntax,
 		Example: `  tuidrive run open-row.keys -- ./inbox
   tuidrive run open-row.keys --size 80x24 --out frames -- ./inbox --flag
-  printf 'wait inbox\npress j enter\nwait kind:\nframe opened\n' | tuidrive run - -- ./inbox`,
+  printf 'wait inbox\npress j enter\nwait kind:\nframe opened\n' |
+    tuidrive run - -- ./inbox`,
 		Args: func(cmd *cobra.Command, args []string) error {
 			if cmd.ArgsLenAtDash() != 1 || len(args) < 2 {
 				return goclikit.UsageError(errors.New("run takes one script, then -- and the program: tuidrive run <script> -- <program> [args...]"))

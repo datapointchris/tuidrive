@@ -29,12 +29,12 @@ var Syntax = `A script is one verb per line. A line starting with # is a comment
   timeout DURATION      bound the waits that follow, such as 30s
   exits [CODE]          wait for the program to exit with CODE, 0 by default
 
-MATCH is bare text, "quoted text" or /a regular expression/. Text matches within
-one row. A pattern reads the whole screen as one line per row, so (?m)^ and $ anchor
-a row. TEXT and TOKEN are bare or quoted. A line ends with its text, so # in the
-middle of a line is part of it.
+MATCH is bare text, "quoted text" or /a regular expression/. Text matches
+within one row. A pattern reads the whole screen as one line per row, so (?m)^
+and $ anchor a row. TEXT and TOKEN are bare or quoted. A line ends with its
+text, so # in the middle of a line is part of it.
 
-KEY is ` + ptyscreen.KeyNames + `.`
+` + ptyscreen.KeyNames
 
 // Script is a parsed key script.
 type Script struct {
