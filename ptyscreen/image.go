@@ -195,6 +195,10 @@ func (f Frame) Image() (image.Image, error) {
 	return canvas, nil
 }
 
+// pngEncoder deflates at BestSpeed. A frame is mostly flat runs of color, so the default
+// level costs about half again the encode time for a file about 2% smaller.
+var pngEncoder = png.Encoder{CompressionLevel: png.BestSpeed}
+
 // WritePNG writes the screen as a PNG, creating the file's directory if it must.
 func (f Frame) WritePNG(path string) error {
 	img, err := f.Image()
@@ -208,7 +212,7 @@ func (f Frame) WritePNG(path string) error {
 	if err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
-	if err := png.Encode(file, img); err != nil {
+	if err := pngEncoder.Encode(file, img); err != nil {
 		_ = file.Close()
 		return fmt.Errorf("write %s: %w", path, err)
 	}
